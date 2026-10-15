@@ -1,0 +1,13 @@
+# Windows 即用版
+
+[按此下載 ZIP（約 92 MB）](https://github.com/aesop011094/forfun/raw/refs/heads/main/downloads/Football-Intelligence-AI-Windows.zip)
+
+適用於 Windows 10／11 64 位元 Intel／AMD 電腦。
+
+下載後選「全部解壓縮」，進入資料夾雙擊 **Start.cmd**；毋須安裝 Python、Node.js 或輸入終端機指令。
+
+已有資料可離線查看，更新資料需要互聯網。完整使用說明位於 ZIP 內的 READ-ME.txt；結束時請按啟動視窗的「停止並離開」。
+
+同目錄 `.sha256` 為壓縮檔校驗值。此便攜版保留全部原有模型、真實資料及授權，省去開發工具及套件測試檔以符合 GitHub 的大小限制。
+
+已在 Windows 相容環境驗證啟動及資料保存；尚未在 Windows 實機全面驗證模型運算。歷史回測屬回溯研究，資料可能滯後，亦不保證未來表現。

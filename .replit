@@ -1,0 +1,12 @@
+entrypoint = "backend/main.py"
+run = "bash scripts/run.sh"
+modules = ["python-3.12", "nodejs-22"]
+
+[deployment]
+run = ["bash", "scripts/run.sh"]
+build = ["bash", "scripts/setup.sh"]
+deploymentTarget = "vm"
+
+[[ports]]
+localPort = 8000
+externalPort = 80

@@ -219,7 +219,7 @@ def training_features(records: list[dict]) -> tuple[np.ndarray, np.ndarray]:
 
 
 class _LeagueModel:
-    def __init__(self, records: list[dict], cutoff: datetime):
+    def __init__(self, records: list[dict], cutoff: datetime, *, fit_gradient_boosting: bool = True):
         self.records, self.cutoff = records, cutoff
         self.teams = sorted({r[key] for r in records for key in ("home", "away")})
         self.index = {name: i for i, name in enumerate(self.teams)}
@@ -241,7 +241,7 @@ class _LeagueModel:
             self.baseline = outcome_probabilities(poisson_matrix(1.5, 1.25))
         if len(records) >= 30:
             self._fit_dc()
-        if len(records) >= 160:
+        if fit_gradient_boosting and len(records) >= 160:
             self._fit_boosts()
 
     def _fit_dc(self):
@@ -344,7 +344,8 @@ class ModelEngine:
 
     def _league(self, league: str) -> _LeagueModel:
         if league not in self.leagues:
-            self.leagues[league] = _LeagueModel([r for r in self.known if r["league"] == league], self.as_of)
+            self.leagues[league] = _LeagueModel([r for r in self.known if r["league"] == league], self.as_of,
+                                               fit_gradient_boosting=self.config.get("fit_gradient_boosting", True))
         return self.leagues[league]
 
     @threadpool_limits.wrap(limits=MODEL_THREADS)

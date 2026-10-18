@@ -90,6 +90,21 @@ class Database:
                 CREATE TABLE IF NOT EXISTS metadata (
                     key TEXT PRIMARY KEY, payload TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS manual_analyses (
+                    id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
+                    mode TEXT NOT NULL CHECK(mode IN ('history','custom_history','scenario')),
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS manual_analyses_created ON manual_analyses(created_at);
+                CREATE TRIGGER IF NOT EXISTS immutable_manual_analysis_update
+                    BEFORE UPDATE ON manual_analyses BEGIN
+                    SELECT RAISE(ABORT,'Manual analysis snapshots are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS immutable_manual_analysis_delete
+                    BEFORE DELETE ON manual_analyses BEGIN
+                    SELECT RAISE(ABORT,'Manual analysis snapshots are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS immutable_manual_analysis_replace
+                    BEFORE INSERT ON manual_analyses WHEN EXISTS(SELECT 1 FROM manual_analyses WHERE id=NEW.id)
+                    BEGIN SELECT RAISE(IGNORE); END;
             """)
 
     def ingest(self, matches: list[dict]) -> int:
@@ -229,3 +244,28 @@ class Database:
     def readiness(self) -> bool:
         with self.connect() as db:
             return db.execute("SELECT 1").fetchone()[0] == 1
+
+    def save_manual_analysis(self, analysis: dict) -> bool:
+        """Manual inputs never enter provider matches, training or measured performance."""
+        with self.connect() as db:
+            cursor = db.execute("INSERT OR IGNORE INTO manual_analyses(id,created_at,mode,payload) VALUES(?,?,?,?)",
+                                (analysis["id"], analysis["created_at"], analysis["mode"], encode(analysis)))
+            return cursor.rowcount == 1
+
+    def manual_analysis(self, analysis_id: str) -> dict | None:
+        with self.connect() as db:
+            row = db.execute("SELECT payload FROM manual_analyses WHERE id=?", (analysis_id,)).fetchone()
+            return json.loads(row[0]) if row else None
+
+    def manual_analyses(self, limit: int = 20, offset: int = 0) -> dict:
+        with self.connect() as db:
+            total = db.execute("SELECT COUNT(*) FROM manual_analyses").fetchone()[0]
+            rows = db.execute("SELECT payload FROM manual_analyses ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?", (limit, offset))
+            items = []
+            for row in rows:
+                value = json.loads(row[0])
+                match, prediction = value["match"], value["prediction"]
+                items.append({"id": value["id"], "created_at": value["created_at"], "mode": value["mode"],
+                              **{key: match[key] for key in ("league", "home", "away", "kickoff")},
+                              "probabilities": prediction["probabilities"], "expected_goals": prediction["expected_goals"]})
+            return {"analyses": items, "total": total, "limit": limit, "offset": offset}

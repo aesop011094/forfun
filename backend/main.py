@@ -256,6 +256,9 @@ def create_app(db_path: str | Path | None = None, scheduler: bool | None = None)
             raise HTTPException(404, "找不到工作紀錄。")
         return value
 
+    from .manual import install_manual_routes
+    install_manual_routes(application, service, require_admin)
+
     dist = ROOT / "web/dist"
 
     @application.get("/{path:path}", include_in_schema=False)
